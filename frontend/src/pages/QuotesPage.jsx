@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Search, Package, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Plus, Search, Package, CheckCircle, XCircle, Mail, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,11 +22,14 @@ export function QuotesPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const [showAddResponseDialog, setShowAddResponseDialog] = useState(false);
+  const [showSendEmailDialog, setShowSendEmailDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [comparison, setComparison] = useState(null);
   const [parts, setParts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [methods, setMethods] = useState({});
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [emailSuppliers, setEmailSuppliers] = useState([]);
 
   const [requestForm, setRequestForm] = useState({
     part_id: '',
