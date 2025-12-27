@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Any
 
 class ProManufaktAPITester:
-    def __init__(self, base_url="https://supply-chain-84.preview.emergentagent.com"):
+    def __init__(self, base_url="https://prodplan-9.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0

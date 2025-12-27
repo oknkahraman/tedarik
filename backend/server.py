@@ -1353,7 +1353,7 @@ async def send_quote_emails(request: QuoteEmailRequest):
     material = MATERIALS.get(part.get("material", ""), {})
     
     # Get app URL from environment or use default
-    app_url = os.environ.get('APP_URL', 'https://supply-chain-84.preview.emergentagent.com')
+    app_url = os.environ.get('APP_URL', 'https://prodplan-9.preview.emergentagent.com')
     
     sent_emails = []
     failed_emails = []
