@@ -44,6 +44,9 @@ export const quotesApi = {
   getResponses: (requestId) => api.get('/quote-responses', { params: { quote_request_id: requestId } }),
   createResponse: (data) => api.post('/quote-responses', data),
   getComparison: (requestId) => api.get(`/quote-comparison/${requestId}`),
+  sendEmails: (data) => api.post('/send-quote-emails', data),
+  getFormData: (requestId, supplierId, token) => api.get(`/quote-form/${requestId}`, { params: { supplier: supplierId, token } }),
+  submitForm: (data) => api.post('/quote-form/submit', data),
 };
 
 // Orders
@@ -91,6 +94,19 @@ export const staticDataApi = {
 // Email
 export const emailApi = {
   send: (data) => api.post('/send-email', data),
+};
+
+// Excel Import/Export
+export const excelApi = {
+  exportParts: (projectId) => api.get(`/export/parts/${projectId}`, { responseType: 'blob' }),
+  exportTemplate: () => api.get('/export/template', { responseType: 'blob' }),
+  importParts: (projectId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/import/parts/${projectId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
 };
 
 export default api;
