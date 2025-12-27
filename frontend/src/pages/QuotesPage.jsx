@@ -589,6 +589,66 @@ export function QuotesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Email Dialog */}
+      <Dialog open={showSendEmailDialog} onOpenChange={setShowSendEmailDialog}>
+        <DialogContent className="sm:max-w-md" data-testid="send-email-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Teklif E-postası Gönder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 rounded-sm p-4 text-sm">
+              <p className="font-medium mb-2">Seçilen tedarikçilere teklif formu linki içeren e-posta gönderilecek.</p>
+              <p className="text-muted-foreground">Tedarikçiler formu doldurarak teklif verebilecek.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tedarikçileri Seçin</Label>
+              <div className="border rounded-sm p-3 max-h-48 overflow-y-auto space-y-2">
+                {selectedRequest?.supplier_ids?.map(id => {
+                  const supplier = suppliers.find(s => s.id === id);
+                  if (!supplier) return null;
+                  return (
+                    <div key={id} className="flex items-center gap-2">
+                      <Checkbox 
+                        id={`email-${id}`}
+                        checked={emailSuppliers.includes(id)}
+                        onCheckedChange={() => toggleEmailSupplier(id)}
+                      />
+                      <Label htmlFor={`email-${id}`} className="text-sm cursor-pointer flex-1">
+                        {supplier.name}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">{supplier.email}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {emailSuppliers.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {emailSuppliers.length} tedarikçiye e-posta gönderilecek
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendEmailDialog(false)}>İptal</Button>
+            <Button onClick={handleSendEmails} disabled={sendingEmails || emailSuppliers.length === 0}>
+              {sendingEmails ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Gönderiliyor...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  E-posta Gönder
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
