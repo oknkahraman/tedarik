@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, Package, Clock, BarChart3, Save, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Package, Clock, BarChart3, Save, Download, Upload, FileSpreadsheet, FileText, Image, X, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,8 +11,8 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
-import { projectsApi, partsApi, staticDataApi, dashboardApi, excelApi } from '../lib/api';
-import { formatDate, getStatusColor, getStatusLabel, cn } from '../lib/utils';
+import { projectsApi, partsApi, staticDataApi, dashboardApi, excelApi, filesApi } from '../lib/api';
+import { formatDate, formatDateTime, getStatusColor, getStatusLabel, cn } from '../lib/utils';
 import { toast } from 'sonner';
 import GanttChart from '../components/GanttChart';
 
@@ -20,12 +20,18 @@ export function ProjectDetailPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const drawingInputRef = useRef(null);
+  const documentInputRef = useRef(null);
   const [project, setProject] = useState(null);
   const [parts, setParts] = useState([]);
   const [ganttData, setGanttData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPartDialog, setShowPartDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showPartDetailDialog, setShowPartDetailDialog] = useState(false);
+  const [selectedPart, setSelectedPart] = useState(null);
+  const [uploadingDrawing, setUploadingDrawing] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const [materials, setMaterials] = useState({});
   const [formTypes, setFormTypes] = useState({});
   const [methods, setMethods] = useState({});
