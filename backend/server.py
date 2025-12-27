@@ -13,6 +13,9 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from io import BytesIO
 import resend
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from data import (
     MATERIALS, FORM_TYPES, MANUFACTURING_METHODS,
