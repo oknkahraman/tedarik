@@ -147,6 +147,76 @@ export function ProjectDetailPage() {
     }
   };
 
+  // Open part detail dialog
+  const handleOpenPartDetail = (part) => {
+    setSelectedPart(part);
+    setShowPartDetailDialog(true);
+  };
+
+  // Upload technical drawing
+  const handleUploadDrawing = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !selectedPart) return;
+
+    setUploadingDrawing(true);
+    try {
+      await filesApi.uploadTechnicalDrawing(selectedPart.id, file);
+      toast.success('Teknik resim yüklendi');
+      loadData();
+      // Refresh selected part
+      const updatedPart = await partsApi.getOne(selectedPart.id);
+      setSelectedPart(updatedPart.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Dosya yüklenemedi');
+    } finally {
+      setUploadingDrawing(false);
+      event.target.value = '';
+    }
+  };
+
+  // Upload additional document
+  const handleUploadDocument = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !selectedPart) return;
+
+    setUploadingDocument(true);
+    try {
+      await filesApi.uploadDocument(selectedPart.id, file);
+      toast.success('Döküman yüklendi');
+      loadData();
+      // Refresh selected part
+      const updatedPart = await partsApi.getOne(selectedPart.id);
+      setSelectedPart(updatedPart.data);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Dosya yüklenemedi');
+    } finally {
+      setUploadingDocument(false);
+      event.target.value = '';
+    }
+  };
+
+  // Delete file
+  const handleDeleteFile = async (filename, isDrawing = false) => {
+    if (!window.confirm('Bu dosyayı silmek istediğinize emin misiniz?')) return;
+
+    try {
+      await filesApi.deleteFile(selectedPart.id, filename);
+      toast.success(isDrawing ? 'Teknik resim silindi' : 'Döküman silindi');
+      loadData();
+      // Refresh selected part
+      const updatedPart = await partsApi.getOne(selectedPart.id);
+      setSelectedPart(updatedPart.data);
+    } catch (error) {
+      toast.error('Dosya silinemedi');
+    }
+  };
+
+  // Download file
+  const handleDownloadFile = (filename) => {
+    const url = filesApi.getFileUrl(filename);
+    window.open(url, '_blank');
+  };
+
   // Excel Export
   const handleExportParts = async () => {
     try {
