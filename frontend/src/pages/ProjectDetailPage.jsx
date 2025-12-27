@@ -522,24 +522,6 @@ export function ProjectDetailPage() {
                       </td>
                     </tr>
                   ))}
-                        </div>
-                      </td>
-                      <td>
-                        <Badge className={getStatusColor(part.status)}>
-                          {getStatusLabel(part.status)}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDeletePart(part.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
                 </tbody>
               </table>
             </div>
