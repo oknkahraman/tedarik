@@ -1,0 +1,197 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "ProManufakt",
+      "archetype": "Precision Industrial",
+      "core_values": ["Efficiency", "Clarity", "Reliability", "Precision"],
+      "emotional_tone": "Professional, Trustworthy, Industrial, Direct"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Manrope, sans-serif",
+        "body": "IBM Plex Sans, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "weights": {
+        "light": 300,
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700
+      },
+      "scale": {
+        "h1": "text-4xl font-bold tracking-tight",
+        "h2": "text-3xl font-semibold tracking-tight",
+        "h3": "text-2xl font-semibold tracking-tight",
+        "h4": "text-xl font-medium",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-normal",
+        "body_sm": "text-sm leading-snug",
+        "caption": "text-xs text-muted-foreground uppercase tracking-wider"
+      },
+      "instructions": "Use Manrope for all headings to give a modern, geometric industrial feel. Use IBM Plex Sans for all body text, tables, and forms for maximum legibility. Use JetBrains Mono for part numbers, SKUs, and technical data."
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#0f172a",
+          "foreground": "#f8fafc",
+          "hover": "#1e293b"
+        },
+        "secondary": {
+          "DEFAULT": "#f1f5f9",
+          "foreground": "#0f172a"
+        },
+        "accent": {
+          "DEFAULT": "#f97316",
+          "foreground": "#ffffff",
+          "description": "Safety Orange - Use for primary actions and critical alerts"
+        },
+        "background": {
+          "DEFAULT": "#ffffff",
+          "subtle": "#f8fafc",
+          "canvas": "#f1f5f9"
+        },
+        "surface": {
+          "DEFAULT": "#ffffff",
+          "raised": "#ffffff",
+          "overlay": "rgba(255, 255, 255, 0.95)"
+        },
+        "border": {
+          "DEFAULT": "#e2e8f0",
+          "subtle": "#f1f5f9",
+          "strong": "#cbd5e1"
+        },
+        "status": {
+          "success": "#10b981",
+          "warning": "#f59e0b",
+          "error": "#ef4444",
+          "info": "#3b82f6"
+        }
+      },
+      "theme_mode": "light",
+      "rules": "Strict Light Mode. No dark mode toggle. Use high contrast for data readability. Avoid large gradients. Use solid colors for clarity."
+    },
+    "layout": {
+      "grid_system": {
+        "dashboard": "grid grid-cols-1 md:grid-cols-4 gap-4",
+        "detail_view": "grid grid-cols-12 gap-6",
+        "form_layout": "grid grid-cols-1 md:grid-cols-2 gap-6"
+      },
+      "spacing": {
+        "container_padding": "p-6 md:p-8",
+        "section_gap": "gap-8",
+        "component_gap": "gap-4"
+      },
+      "containers": {
+        "card": "bg-white border border-border shadow-sm rounded-sm",
+        "panel": "bg-background-subtle border-r border-border h-full"
+      },
+      "density": "High. Use 'h-9' for inputs and buttons. Reduce padding in tables to maximize data visibility."
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 rounded-sm font-medium transition-colors",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 rounded-sm font-medium transition-colors",
+        "outline": "border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 rounded-sm transition-colors",
+        "ghost": "hover:bg-accent hover:text-accent-foreground h-9 px-4 rounded-sm transition-colors",
+        "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 px-4 rounded-sm transition-colors"
+      },
+      "cards": {
+        "style": "rounded-sm border border-border bg-card text-card-foreground shadow-sm",
+        "header": "p-6 flex flex-row items-center justify-between space-y-0 pb-2",
+        "content": "p-6 pt-0"
+      },
+      "inputs": {
+        "style": "flex h-9 w-full rounded-sm border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      },
+      "tables": {
+        "wrapper": "relative w-full overflow-auto border rounded-sm",
+        "header": "h-10 px-4 text-left align-middle font-medium text-muted-foreground bg-secondary/50",
+        "row": "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+        "cell": "p-4 align-middle [&:has([role=checkbox])]:pr-0 font-mono text-sm"
+      },
+      "badges": {
+        "default": "inline-flex items-center rounded-sm border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        "outline": "text-foreground"
+      }
+    },
+    "visual_enhancers": {
+      "shadows": {
+        "sm": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+        "md": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "lg": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)"
+      },
+      "borders": {
+        "radius": "rounded-sm",
+        "width": "border",
+        "color": "border-border"
+      },
+      "textures": {
+        "noise": "bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"
+      }
+    },
+    "motion": {
+      "transitions": "transition-all duration-200 ease-in-out",
+      "hover_lift": "hover:-translate-y-0.5 hover:shadow-md",
+      "accordion": "data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
+    },
+    "accessibility": {
+      "contrast": "Ensure text contrast ratio is at least 4.5:1 against background.",
+      "focus_states": "Visible focus rings on all interactive elements.",
+      "aria_labels": "Required for all icon-only buttons."
+    }
+  },
+  "assets": {
+    "images": {
+      "dashboard_hero": {
+        "url": "https://images.unsplash.com/photo-1764115424769-ebdd2683d5a8?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Industrial workshop overview",
+        "usage": "Dashboard welcome banner or empty state background"
+      },
+      "machinery_cnc": {
+        "url": "https://images.unsplash.com/photo-1764114235896-034c8772de01?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "CNC Laser cutting metal",
+        "usage": "Manufacturing method selection card (Laser/CNC)"
+      },
+      "machinery_welding": {
+        "url": "https://images.unsplash.com/photo-1738162837451-2041c1418f54?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Welding sparks",
+        "usage": "Manufacturing method selection card (Welding)"
+      },
+      "engineer_planning": {
+        "url": "https://images.unsplash.com/photo-1729983201896-b4cd11e14344?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Engineer checking blueprints",
+        "usage": "Project planning or engineering section header"
+      },
+      "factory_floor": {
+        "url": "https://images.unsplash.com/photo-1583737077813-bc3945c54a4c?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Factory floor operations",
+        "usage": "Supplier management or production tracking background"
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px, size 16px or 20px"
+    }
+  },
+  "implementation_guide": {
+    "steps": [
+      "1. Install dependencies: `npm install lucide-react recharts date-fns react-day-picker`",
+      "2. Configure Tailwind: Update `tailwind.config.js` with the color palette and font families.",
+      "3. Global CSS: Update `index.css` to enforce the light theme variables and font imports.",
+      "4. Layout Structure: Create a `Layout` component with a sidebar navigation and top header.",
+      "5. Dashboard: Implement the 'Control Room' grid layout using the specified grid system.",
+      "6. Components: Customize Shadcn components (Button, Card, Table, Input) to match the 'Precision Industrial' style (rounded-sm, dense padding).",
+      "7. Charts: Use Recharts for Gantt charts and cost analysis, styled with the theme colors."
+    ],
+    "universal_guidelines": [
+      "Do NOT use gradients for backgrounds. Use solid colors or subtle noise.",
+      "Do NOT use 'Inter' font. Use 'Manrope' for headings and 'IBM Plex Sans' for body.",
+      "Ensure all interactive elements have `data-testid` attributes.",
+      "Use 'sonner' for toast notifications.",
+      "Prioritize data density. Avoid excessive whitespace in tables.",
+      "Use 'Safety Orange' (#f97316) sparingly for primary actions and alerts only."
+    ]
+  }
+}
