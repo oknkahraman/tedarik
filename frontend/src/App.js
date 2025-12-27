@@ -7,6 +7,7 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import QuotesPage from "./pages/QuotesPage";
+import QuoteFormPage from "./pages/QuoteFormPage";
 import OrdersPage from "./pages/OrdersPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -16,18 +17,26 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Toaster position="top-right" richColors />
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-            <Route path="/suppliers" element={<SuppliersPage />} />
-            <Route path="/quotes" element={<QuotesPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Routes>
-        </Layout>
+        <Routes>
+          {/* Public Quote Form - No Layout */}
+          <Route path="/quote-form/:requestId" element={<QuoteFormPage />} />
+          
+          {/* Main App with Layout */}
+          <Route path="/*" element={
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+                <Route path="/suppliers" element={<SuppliersPage />} />
+                <Route path="/quotes" element={<QuotesPage />} />
+                <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Routes>
+            </Layout>
+          } />
+        </Routes>
       </BrowserRouter>
     </div>
   );
