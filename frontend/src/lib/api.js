@@ -109,4 +109,24 @@ export const excelApi = {
   }
 };
 
+// File Upload
+export const filesApi = {
+  uploadTechnicalDrawing: (partId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/upload/technical-drawing/${partId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  uploadDocument: (partId, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/upload/document/${partId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  getFileUrl: (filename) => `${API_BASE}/files/${filename}`,
+  deleteFile: (partId, filename) => api.delete(`/files/${partId}/${filename}`)
+};
+
 export default api;
