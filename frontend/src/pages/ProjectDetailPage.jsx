@@ -704,6 +704,202 @@ export function ProjectDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Part Detail Dialog with File Upload */}
+      <Dialog open={showPartDetailDialog} onOpenChange={setShowPartDetailDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="part-detail-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading">
+              {selectedPart?.name}
+              <span className="font-mono text-sm text-muted-foreground ml-2">({selectedPart?.code})</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedPart && (
+            <div className="space-y-6 py-4">
+              {/* Part Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Adet</p>
+                  <p className="font-medium">{selectedPart.quantity}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Malzeme</p>
+                  <p className="font-medium">{materials[selectedPart.material]?.name || selectedPart.material || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Form Tipi</p>
+                  <p className="font-medium">{formTypes[selectedPart.form_type]?.name || selectedPart.form_type || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Durum</p>
+                  <Badge className={getStatusColor(selectedPart.status)}>
+                    {getStatusLabel(selectedPart.status)}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Manufacturing Methods */}
+              {selectedPart.manufacturing_methods?.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">İmalat Yöntemleri</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPart.manufacturing_methods.map((code) => (
+                      <Badge key={code} variant="outline">
+                        {methods[code]?.name || code}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedPart.notes && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Notlar</p>
+                  <p className="text-sm bg-muted/50 p-3 rounded-sm">{selectedPart.notes}</p>
+                </div>
+              )}
+
+              {/* Technical Drawing Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium flex items-center gap-2">
+                    <Image className="h-4 w-4" />
+                    Teknik Resim
+                  </p>
+                  <div>
+                    <input
+                      type="file"
+                      ref={drawingInputRef}
+                      className="hidden"
+                      accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg"
+                      onChange={handleUploadDrawing}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => drawingInputRef.current?.click()}
+                      disabled={uploadingDrawing}
+                    >
+                      {uploadingDrawing ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      {selectedPart.technical_drawing_filename ? 'Değiştir' : 'Yükle'}
+                    </Button>
+                  </div>
+                </div>
+                
+                {selectedPart.technical_drawing_filename ? (
+                  <div className="flex items-center justify-between bg-muted/50 p-3 rounded-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{selectedPart.technical_drawing_original_name || selectedPart.technical_drawing_filename}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleDownloadFile(selectedPart.technical_drawing_filename)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleDeleteFile(selectedPart.technical_drawing_filename, true)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-sm text-center">
+                    Henüz teknik resim yüklenmemiş
+                  </p>
+                )}
+              </div>
+
+              {/* Additional Documents Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-medium flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Ek Dökümanlar
+                  </p>
+                  <div>
+                    <input
+                      type="file"
+                      ref={documentInputRef}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                      onChange={handleUploadDocument}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => documentInputRef.current?.click()}
+                      disabled={uploadingDocument}
+                    >
+                      {uploadingDocument ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Döküman Ekle
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedPart.additional_documents?.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedPart.additional_documents.map((doc, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-muted/50 p-3 rounded-sm">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{doc.original_name || doc.filename}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleDownloadFile(doc.filename)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleDeleteFile(doc.filename, false)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-sm text-center">
+                    Henüz ek döküman yüklenmemiş
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPartDetailDialog(false)}>
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Import Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent className="sm:max-w-md" data-testid="import-dialog">
