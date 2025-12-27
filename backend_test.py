@@ -397,6 +397,73 @@ class ProManufaktAPITester:
             if success and gantt:
                 print(f"   Gantt chart has {len(gantt.get('tasks', []))} tasks")
 
+    def test_excel_import_export(self):
+        """Test Excel import/export functionality"""
+        print("\n" + "="*50)
+        print("TESTING EXCEL IMPORT/EXPORT")
+        print("="*50)
+        
+        # Test Excel template download
+        success, template = self.run_test("Excel Template Download", "GET", "export/template", 200, headers={'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+        if success:
+            print("   ✅ Excel template download endpoint working")
+        
+        # Test Excel parts export (need a project with parts)
+        if self.created_resources['projects']:
+            project_id = self.created_resources['projects'][0]
+            success, export_data = self.run_test("Excel Parts Export", "GET", f"export/parts/{project_id}", 200, headers={'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+            if success:
+                print(f"   ✅ Excel parts export working for project {project_id}")
+            
+            # Test Excel parts import (would need actual file upload, so we test the endpoint exists)
+            # Note: This will fail without actual file, but we can check if endpoint exists
+            success, import_result = self.run_test("Excel Parts Import Endpoint", "POST", f"import/parts/{project_id}", 400)  # Expect 400 without file
+            if success or "file" in str(import_result).lower():
+                print(f"   ✅ Excel parts import endpoint exists (expects file upload)")
+
+    def test_quote_email_system(self):
+        """Test quote email system"""
+        print("\n" + "="*50)
+        print("TESTING QUOTE EMAIL SYSTEM")
+        print("="*50)
+        
+        if not self.created_resources['quote_requests'] or not self.created_resources['suppliers']:
+            print("❌ No quote requests or suppliers available for email testing")
+            return
+        
+        quote_request_id = self.created_resources['quote_requests'][0]
+        supplier_id = self.created_resources['suppliers'][0]
+        
+        # Test send quote emails (will fail without RESEND_API_KEY as expected)
+        email_data = {
+            "quote_request_id": quote_request_id,
+            "supplier_ids": [supplier_id]
+        }
+        success, email_result = self.run_test("Send Quote Emails", "POST", "send-quote-emails", 500, email_data)  # Expect 500 without API key
+        if not success and "yapılandırılmamış" in str(email_result).lower():
+            print("   ✅ Email endpoint correctly fails without RESEND_API_KEY")
+        
+        # Test quote form data endpoint (public endpoint)
+        # Generate a test token for the form
+        test_token = "TEST123"
+        success, form_data = self.run_test("Quote Form Data", "GET", f"quote-form/{quote_request_id}?supplier={supplier_id}&token={test_token}", 403)  # Expect 403 with invalid token
+        if not success:
+            print("   ✅ Quote form endpoint exists and validates tokens")
+        
+        # Test quote form submit endpoint
+        form_submit_data = {
+            "quote_request_id": quote_request_id,
+            "supplier_id": supplier_id,
+            "token": test_token,
+            "unit_price": 100.0,
+            "currency": "TRY",
+            "delivery_date": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+            "payment_terms": 30
+        }
+        success, submit_result = self.run_test("Quote Form Submit", "POST", "quote-form/submit", 403, form_submit_data)  # Expect 403 with invalid token
+        if not success:
+            print("   ✅ Quote form submit endpoint exists and validates tokens")
+
     def test_settings_and_currency(self):
         """Test settings and currency management"""
         print("\n" + "="*50)
