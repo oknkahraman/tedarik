@@ -37,13 +37,17 @@
 - ✅ Dashboard istatistikleri (/api/dashboard/stats)
 - ✅ Gantt chart verileri (/api/dashboard/gantt/{project_id})
 - ✅ Statik veriler (malzemeler, form tipleri, imalat yöntemleri)
+- ✅ **Excel Import/Export** (/api/export/template, /api/export/parts/{id}, /api/import/parts/{id})
+- ✅ **Teklif E-posta Sistemi** (/api/send-quote-emails, /api/quote-form/{id}, /api/quote-form/submit)
 
 ### Frontend (React)
 - ✅ Dashboard sayfası - istatistikler, son projeler, yaklaşan terminler
 - ✅ Projeler listesi - filtreleme, arama, oluşturma
-- ✅ Proje detay - parça ekleme, Gantt chart görünümü
+- ✅ Proje detay - parça ekleme, **Excel import/export butonları**
+- ✅ **Gelişmiş Gantt Chart** - zoom, scroll, tooltip, kategori renkleri
 - ✅ Tedarikçiler - performans skorları, uzmanlık alanları
-- ✅ Teklifler - teklif talebi oluşturma, karşılaştırma tablosu
+- ✅ Teklifler - teklif talebi oluşturma, karşılaştırma, **E-posta Gönder butonu**
+- ✅ **Tedarikçi Teklif Formu** (/quote-form/:id) - public sayfa, form linki ile erişim
 - ✅ Siparişler - liste, durum güncelleme
 - ✅ Bildirimler - okundu işaretleme
 - ✅ Ayarlar - şirket bilgileri, döviz kurları, Contabo kurulum kılavuzu
@@ -58,20 +62,19 @@
 
 ## Prioritized Backlog
 
-### P0 (Critical - Not Implemented)
-- Excel import/export fonksiyonu
-- E-posta gönderimi için Resend API key entegrasyonu
+### P0 (Critical - Implemented ✅)
+- ✅ Excel import/export fonksiyonu
+- ⏳ E-posta gönderimi için Resend API key entegrasyonu (kod hazır, key gerekli)
 
 ### P1 (High Priority)
-- Tedarikçiye otomatik teklif e-postası gönderme
-- Gelişmiş Gantt chart (interaktif, sürükle-bırak)
+- ✅ Tedarikçiye otomatik teklif e-postası gönderme (form linki ile)
+- ✅ Gelişmiş Gantt chart (interaktif, zoom, scroll)
 - Maliyet analizi raporları
 - Parça teknik resim yükleme
 
 ### P2 (Medium Priority)
 - Tedarikçi performans trend analizi
 - Proje bütçe takibi ve aşım uyarıları
-- Toplu parça ekleme (Excel'den)
 - Haftalık/günlük e-posta özetleri
 
 ### P3 (Low Priority)
@@ -82,9 +85,8 @@
 
 ## Next Tasks
 1. Resend API key alınıp .env'e eklenmeli (RESEND_API_KEY, SENDER_EMAIL)
-2. Excel import/export fonksiyonu eklenmeli
-3. Tedarikçiye teklif e-postası şablonu tamamlanmalı
-4. Gelişmiş Gantt chart eklenmeli
+2. Maliyet analizi rapor sayfası
+3. Parça teknik resim yükleme (file upload)
 
 ## Architecture
 ```
@@ -97,13 +99,16 @@
 ├── frontend/
 │   ├── src/
 │   │   ├── App.js
-│   │   ├── components/Layout.jsx
+│   │   ├── components/
+│   │   │   ├── Layout.jsx
+│   │   │   └── GanttChart.jsx  # Interactive Gantt
 │   │   ├── pages/
 │   │   │   ├── Dashboard.jsx
 │   │   │   ├── ProjectsPage.jsx
-│   │   │   ├── ProjectDetailPage.jsx
+│   │   │   ├── ProjectDetailPage.jsx  # Excel import/export
 │   │   │   ├── SuppliersPage.jsx
-│   │   │   ├── QuotesPage.jsx
+│   │   │   ├── QuotesPage.jsx         # Email sending
+│   │   │   ├── QuoteFormPage.jsx      # Public supplier form
 │   │   │   ├── OrdersPage.jsx
 │   │   │   ├── NotificationsPage.jsx
 │   │   │   └── SettingsPage.jsx
