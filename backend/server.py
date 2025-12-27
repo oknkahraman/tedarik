@@ -903,6 +903,532 @@ async def get_gantt_data(project_id: str):
         "tasks": gantt_data
     }
 
+# --- Excel Import/Export Routes ---
+@api_router.get("/export/parts/{project_id}")
+async def export_parts_to_excel(project_id: str):
+    """Export project parts to Excel file"""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proje bulunamadı")
+    
+    parts = await db.parts.find({"project_id": project_id}, {"_id": 0}).to_list(1000)
+    
+    # Create workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Parça Listesi"
+    
+    # Header style
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Headers
+    headers = ["Parça Kodu", "Parça Adı", "Adet", "Malzeme", "Form Tipi", "Ölçü 1", "Ölçü 2", "Ölçü 3", "İmalat 1", "İmalat 2", "İmalat 3", "İmalat 4", "İmalat 5", "Notlar"]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+    
+    # Data rows
+    for row_idx, part in enumerate(parts, 2):
+        dims = part.get("dimensions", {}) or {}
+        methods = part.get("manufacturing_methods", [])
+        
+        # Get dimension values based on form type
+        dim_values = []
+        form_type = part.get("form_type", "")
+        if form_type == "prizmatik":
+            dim_values = [dims.get("width"), dims.get("height"), dims.get("length")]
+        elif form_type == "silindirik":
+            dim_values = [dims.get("diameter"), dims.get("length"), None]
+        elif form_type == "boru":
+            dim_values = [dims.get("outer_diameter"), dims.get("inner_diameter"), dims.get("length")]
+        else:
+            dim_values = [None, None, None]
+        
+        row_data = [
+            part.get("code", ""),
+            part.get("name", ""),
+            part.get("quantity", 0),
+            part.get("material", ""),
+            form_type,
+            dim_values[0] if len(dim_values) > 0 else None,
+            dim_values[1] if len(dim_values) > 1 else None,
+            dim_values[2] if len(dim_values) > 2 else None,
+            methods[0] if len(methods) > 0 else None,
+            methods[1] if len(methods) > 1 else None,
+            methods[2] if len(methods) > 2 else None,
+            methods[3] if len(methods) > 3 else None,
+            methods[4] if len(methods) > 4 else None,
+            part.get("notes", "")
+        ]
+        
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col, value=value)
+            cell.border = thin_border
+    
+    # Adjust column widths
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    # Save to bytes
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"{project['code']}_parcalar.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@api_router.get("/export/template")
+async def export_parts_template():
+    """Export empty template for parts import"""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Parça Şablonu"
+    
+    # Header style
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    
+    # Headers
+    headers = ["Parça Kodu*", "Parça Adı*", "Adet*", "Malzeme", "Form Tipi", "Ölçü 1", "Ölçü 2", "Ölçü 3", "İmalat 1", "İmalat 2", "İmalat 3", "İmalat 4", "İmalat 5", "Notlar"]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+    
+    # Instructions sheet
+    ws2 = wb.create_sheet("Açıklamalar")
+    instructions = [
+        ["ALAN", "AÇIKLAMA", "ÖRNEK"],
+        ["Parça Kodu*", "Benzersiz parça kodu (zorunlu)", "MIL-001"],
+        ["Parça Adı*", "Parça adı (zorunlu)", "Mil"],
+        ["Adet*", "Adet sayısı (zorunlu)", "50"],
+        ["Malzeme", "Malzeme kodu", "AISI304, S355, AL5754"],
+        ["Form Tipi", "prizmatik / silindirik / boru", "silindirik"],
+        ["Ölçü 1", "Prizmatik: Genişlik, Silindirik: Çap, Boru: Dış Çap", "50"],
+        ["Ölçü 2", "Prizmatik: Yükseklik, Silindirik: Uzunluk, Boru: İç Çap", "200"],
+        ["Ölçü 3", "Prizmatik: Uzunluk, Boru: Uzunluk", "300"],
+        ["İmalat 1-5", "İmalat yöntemi kodları (sıralı)", "3001, 5009, 5002"],
+        ["", "", ""],
+        ["İMALAT KODLARI", "", ""],
+        ["1001", "Lazer Kesim", ""],
+        ["1002", "Abkant Büküm", ""],
+        ["2001", "MIG/MAG Kaynak", ""],
+        ["2002", "TIG Kaynak", ""],
+        ["3001", "CNC Torna", ""],
+        ["3002", "CNC Dik İşlem (3 Eksen)", ""],
+        ["5001", "Eloksal", ""],
+        ["5002", "Galvaniz", ""],
+        ["5003", "Statik Boya", ""],
+        ["5009", "Isıl İşlem", ""],
+        ["9001", "Rulman", ""],
+        ["9007", "Çelik Ham Malzeme", ""],
+    ]
+    for row_idx, row_data in enumerate(instructions, 1):
+        for col_idx, value in enumerate(row_data, 1):
+            ws2.cell(row=row_idx, column=col_idx, value=value)
+    
+    # Adjust column widths
+    for col in range(1, 15):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=parca_sablonu.xlsx"}
+    )
+
+@api_router.post("/import/parts/{project_id}")
+async def import_parts_from_excel(project_id: str, file: UploadFile = File(...)):
+    """Import parts from Excel file"""
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Proje bulunamadı")
+    
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Sadece Excel dosyası (.xlsx, .xls) kabul edilir")
+    
+    try:
+        contents = await file.read()
+        wb = openpyxl.load_workbook(BytesIO(contents))
+        ws = wb.active
+        
+        imported = 0
+        errors = []
+        
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+            if not row[0] or not row[1] or not row[2]:
+                continue  # Skip empty rows
+            
+            try:
+                code = str(row[0]).strip()
+                name = str(row[1]).strip()
+                quantity = int(row[2]) if row[2] else 1
+                material = str(row[3]).strip() if row[3] else None
+                form_type = str(row[4]).strip().lower() if row[4] else None
+                
+                # Parse dimensions based on form type
+                dimensions = {}
+                if form_type == "prizmatik":
+                    dimensions = {
+                        "width": float(row[5]) if row[5] else None,
+                        "height": float(row[6]) if row[6] else None,
+                        "length": float(row[7]) if row[7] else None
+                    }
+                elif form_type == "silindirik":
+                    dimensions = {
+                        "diameter": float(row[5]) if row[5] else None,
+                        "length": float(row[6]) if row[6] else None
+                    }
+                elif form_type == "boru":
+                    dimensions = {
+                        "outer_diameter": float(row[5]) if row[5] else None,
+                        "inner_diameter": float(row[6]) if row[6] else None,
+                        "length": float(row[7]) if row[7] else None
+                    }
+                
+                # Parse manufacturing methods
+                methods = []
+                for i in range(8, 13):
+                    if row[i]:
+                        methods.append(str(row[i]).strip())
+                
+                notes = str(row[13]).strip() if len(row) > 13 and row[13] else None
+                
+                # Check for duplicate code
+                existing = await db.parts.find_one({"project_id": project_id, "code": code})
+                if existing:
+                    errors.append(f"Satır {row_idx}: '{code}' kodu zaten mevcut")
+                    continue
+                
+                # Create part
+                part = {
+                    "id": str(uuid.uuid4()),
+                    "project_id": project_id,
+                    "code": code,
+                    "name": name,
+                    "quantity": quantity,
+                    "material": material,
+                    "form_type": form_type,
+                    "dimensions": dimensions,
+                    "manufacturing_methods": methods,
+                    "status": "pending",
+                    "notes": notes,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.parts.insert_one(part)
+                imported += 1
+                
+            except Exception as e:
+                errors.append(f"Satır {row_idx}: {str(e)}")
+        
+        return {
+            "success": True,
+            "imported": imported,
+            "errors": errors,
+            "message": f"{imported} parça başarıyla eklendi" + (f", {len(errors)} hata" if errors else "")
+        }
+        
+    except Exception as e:
+        logger.error(f"Excel import error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Excel dosyası okunamadı: {str(e)}")
+
+# --- Quote Email Routes ---
+class QuoteEmailRequest(BaseModel):
+    quote_request_id: str
+    supplier_ids: List[str]
+    
+@api_router.post("/send-quote-emails")
+async def send_quote_emails(request: QuoteEmailRequest):
+    """Send quote request emails to selected suppliers with form link"""
+    if not resend_api_key:
+        raise HTTPException(status_code=500, detail="E-posta servisi yapılandırılmamış. RESEND_API_KEY ekleyin.")
+    
+    quote_request = await db.quote_requests.find_one({"id": request.quote_request_id}, {"_id": 0})
+    if not quote_request:
+        raise HTTPException(status_code=404, detail="Teklif talebi bulunamadı")
+    
+    part = await db.parts.find_one({"id": quote_request["part_id"]}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Parça bulunamadı")
+    
+    project = await db.projects.find_one({"id": part["project_id"]}, {"_id": 0})
+    settings = await db.settings.find_one({"id": "settings"}, {"_id": 0}) or {}
+    
+    method = MANUFACTURING_METHODS.get(quote_request.get("manufacturing_method", ""), {})
+    material = MATERIALS.get(part.get("material", ""), {})
+    
+    # Get app URL from environment or use default
+    app_url = os.environ.get('APP_URL', 'https://supply-chain-84.preview.emergentagent.com')
+    
+    sent_emails = []
+    failed_emails = []
+    
+    for supplier_id in request.supplier_ids:
+        supplier = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
+        if not supplier:
+            failed_emails.append({"supplier_id": supplier_id, "error": "Tedarikçi bulunamadı"})
+            continue
+        
+        # Generate unique form token
+        form_token = str(uuid.uuid4())[:8].upper()
+        
+        # Store token in quote request for validation
+        await db.quote_requests.update_one(
+            {"id": request.quote_request_id},
+            {"$push": {"form_tokens": {"supplier_id": supplier_id, "token": form_token, "created_at": datetime.now(timezone.utc).isoformat()}}}
+        )
+        
+        # Form link
+        form_link = f"{app_url}/quote-form/{request.quote_request_id}?supplier={supplier_id}&token={form_token}"
+        
+        # Build email HTML
+        html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: #1F4E79; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background: #f9f9f9; }}
+        .section {{ background: white; padding: 15px; margin: 10px 0; border-left: 4px solid #1F4E79; }}
+        .label {{ color: #666; font-size: 12px; text-transform: uppercase; }}
+        .value {{ font-weight: bold; font-size: 16px; }}
+        .button {{ display: inline-block; background: #F97316; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
+        .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        td {{ padding: 8px; border-bottom: 1px solid #eee; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TEKLİF TALEBİ</h1>
+            <p>{settings.get('company_name', 'ProManufakt')}</p>
+        </div>
+        
+        <div class="content">
+            <p>Sayın <strong>{supplier.get('contact_person', supplier['name'])}</strong>,</p>
+            
+            <p>Aşağıdaki işlem için fiyat teklifinizi talep ediyoruz:</p>
+            
+            <div class="section">
+                <p class="label">PROJE</p>
+                <p class="value">{project.get('name', '-') if project else '-'} ({project.get('code', '-') if project else '-'})</p>
+            </div>
+            
+            <div class="section">
+                <p class="label">PARÇA BİLGİLERİ</p>
+                <table>
+                    <tr><td>Parça Adı:</td><td><strong>{part.get('name', '-')}</strong></td></tr>
+                    <tr><td>Parça Kodu:</td><td><strong>{part.get('code', '-')}</strong></td></tr>
+                    <tr><td>Miktar:</td><td><strong>{part.get('quantity', 0)} adet</strong></td></tr>
+                    <tr><td>Malzeme:</td><td><strong>{material.get('name', part.get('material', '-'))}</strong></td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <p class="label">İSTENEN İŞLEM</p>
+                <p class="value">{method.get('code', '')} - {method.get('name', quote_request.get('manufacturing_method', '-'))}</p>
+                <p style="color: #666; font-size: 14px;">{method.get('description', '')}</p>
+            </div>
+            
+            <div class="section">
+                <p class="label">TERMİN</p>
+                <p class="value">Teklif Son Tarih: {quote_request.get('deadline', '-')[:10]}</p>
+            </div>
+            
+            <center>
+                <a href="{form_link}" class="button">TEKLİF FORMUNU DOLDUR</a>
+            </center>
+            
+            <p style="text-align: center; color: #666; font-size: 12px;">
+                Form Şifresi: <strong>{form_token}</strong>
+            </p>
+            
+            {f'<p style="color: #666;"><strong>Not:</strong> {quote_request.get("notes", "")}</p>' if quote_request.get('notes') else ''}
+        </div>
+        
+        <div class="footer">
+            <p>{settings.get('company_name', 'ProManufakt')}</p>
+            <p>{settings.get('company_email', '')} | {settings.get('company_phone', '')}</p>
+            <p>{settings.get('company_address', '')}</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        
+        try:
+            email_params = {
+                "from": SENDER_EMAIL,
+                "to": [supplier["email"]],
+                "subject": f"Teklif Talebi - {part.get('code', '')} - {project.get('name', '') if project else ''}",
+                "html": html_content
+            }
+            
+            result = await asyncio.to_thread(resend.Emails.send, email_params)
+            sent_emails.append({
+                "supplier_id": supplier_id,
+                "supplier_name": supplier["name"],
+                "email": supplier["email"],
+                "email_id": result.get("id")
+            })
+            
+            # Create notification
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "type": "email_sent",
+                "title": "Teklif E-postası Gönderildi",
+                "message": f"{supplier['name']} tedarikçisine teklif talebi gönderildi",
+                "reference_type": "quote_request",
+                "reference_id": request.quote_request_id,
+                "is_read": False,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Email send error to {supplier['email']}: {str(e)}")
+            failed_emails.append({
+                "supplier_id": supplier_id,
+                "supplier_name": supplier["name"],
+                "error": str(e)
+            })
+    
+    return {
+        "success": len(sent_emails) > 0,
+        "sent": sent_emails,
+        "failed": failed_emails,
+        "message": f"{len(sent_emails)} e-posta gönderildi" + (f", {len(failed_emails)} başarısız" if failed_emails else "")
+    }
+
+# --- Public Quote Form Routes ---
+@api_router.get("/quote-form/{quote_request_id}")
+async def get_quote_form_data(quote_request_id: str, supplier: str, token: str):
+    """Get quote form data for supplier to fill"""
+    quote_request = await db.quote_requests.find_one({"id": quote_request_id}, {"_id": 0})
+    if not quote_request:
+        raise HTTPException(status_code=404, detail="Teklif talebi bulunamadı")
+    
+    # Validate token
+    tokens = quote_request.get("form_tokens", [])
+    valid_token = any(t.get("supplier_id") == supplier and t.get("token") == token for t in tokens)
+    if not valid_token:
+        raise HTTPException(status_code=403, detail="Geçersiz form linki")
+    
+    part = await db.parts.find_one({"id": quote_request["part_id"]}, {"_id": 0})
+    supplier_data = await db.suppliers.find_one({"id": supplier}, {"_id": 0})
+    project = await db.projects.find_one({"id": part["project_id"]}, {"_id": 0}) if part else None
+    
+    method = MANUFACTURING_METHODS.get(quote_request.get("manufacturing_method", ""), {})
+    material = MATERIALS.get(part.get("material", ""), {}) if part else {}
+    
+    return {
+        "quote_request": quote_request,
+        "part": part,
+        "project": project,
+        "supplier": supplier_data,
+        "method": method,
+        "material": material
+    }
+
+class PublicQuoteSubmit(BaseModel):
+    quote_request_id: str
+    supplier_id: str
+    token: str
+    unit_price: float
+    currency: str = "TRY"
+    delivery_date: str
+    payment_terms: int = 30
+    notes: Optional[str] = None
+
+@api_router.post("/quote-form/submit")
+async def submit_quote_form(data: PublicQuoteSubmit):
+    """Submit quote response from supplier form"""
+    quote_request = await db.quote_requests.find_one({"id": data.quote_request_id}, {"_id": 0})
+    if not quote_request:
+        raise HTTPException(status_code=404, detail="Teklif talebi bulunamadı")
+    
+    # Validate token
+    tokens = quote_request.get("form_tokens", [])
+    valid_token = any(t.get("supplier_id") == data.supplier_id and t.get("token") == data.token for t in tokens)
+    if not valid_token:
+        raise HTTPException(status_code=403, detail="Geçersiz form linki")
+    
+    # Check if already submitted
+    existing = await db.quote_responses.find_one({
+        "quote_request_id": data.quote_request_id,
+        "supplier_id": data.supplier_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu tedarikçi zaten teklif vermiş")
+    
+    part = await db.parts.find_one({"id": quote_request["part_id"]}, {"_id": 0})
+    quantity = part.get("quantity", 1) if part else 1
+    
+    quote_response = {
+        "id": str(uuid.uuid4()),
+        "quote_request_id": data.quote_request_id,
+        "supplier_id": data.supplier_id,
+        "unit_price": data.unit_price,
+        "currency": data.currency,
+        "total_price": data.unit_price * quantity,
+        "delivery_date": data.delivery_date,
+        "payment_terms": data.payment_terms,
+        "status": "received",
+        "notes": data.notes,
+        "submitted_via": "form",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.quote_responses.insert_one(quote_response)
+    
+    # Update quote request status
+    await db.quote_requests.update_one(
+        {"id": data.quote_request_id},
+        {"$set": {"status": "received"}}
+    )
+    
+    # Create notification
+    supplier = await db.suppliers.find_one({"id": data.supplier_id}, {"_id": 0})
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "type": "quote_received",
+        "title": "Yeni Teklif Alındı",
+        "message": f"{supplier.get('name', 'Tedarikçi')} teklif gönderdi - {data.unit_price} {data.currency}",
+        "reference_type": "quote_response",
+        "reference_id": quote_response["id"],
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {
+        "success": True,
+        "message": "Teklifiniz başarıyla gönderildi. Teşekkür ederiz!",
+        "quote_response_id": quote_response["id"]
+    }
+
 # Include router
 app.include_router(api_router)
 
