@@ -459,25 +459,69 @@ export function ProjectDetailPage() {
                     <th>Parça Adı</th>
                     <th>Adet</th>
                     <th>Malzeme</th>
-                    <th>İmalat Yöntemleri</th>
+                    <th>Dosyalar</th>
                     <th>Durum</th>
-                    <th className="w-20"></th>
+                    <th className="w-24"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {parts.map((part) => (
-                    <tr key={part.id} data-testid={`part-row-${part.id}`}>
+                    <tr 
+                      key={part.id} 
+                      data-testid={`part-row-${part.id}`}
+                      className="cursor-pointer"
+                      onClick={() => handleOpenPartDetail(part)}
+                    >
                       <td className="font-mono">{part.code}</td>
                       <td className="font-medium">{part.name}</td>
                       <td>{part.quantity}</td>
                       <td>{materials[part.material]?.name || part.material || '-'}</td>
                       <td>
-                        <div className="flex flex-wrap gap-1">
-                          {part.manufacturing_methods?.map(code => (
-                            <Badge key={code} variant="outline" className="text-xs">
-                              {methods[code]?.name || code}
+                        <div className="flex items-center gap-2">
+                          {part.technical_drawing_filename && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Image className="h-3 w-3" />
+                              Teknik Resim
                             </Badge>
-                          ))}
+                          )}
+                          {part.additional_documents?.length > 0 && (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <FileText className="h-3 w-3" />
+                              {part.additional_documents.length} Döküman
+                            </Badge>
+                          )}
+                          {!part.technical_drawing_filename && !part.additional_documents?.length && (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <Badge className={getStatusColor(part.status)}>
+                          {getStatusLabel(part.status)}
+                        </Badge>
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleOpenPartDetail(part)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleDeletePart(part.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                         </div>
                       </td>
                       <td>
