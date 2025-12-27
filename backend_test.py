@@ -544,6 +544,8 @@ class ProManufaktAPITester:
             self.test_orders_workflow()
             self.test_notifications()
             self.test_dashboard_stats()
+            self.test_excel_import_export()  # New Excel features
+            self.test_quote_email_system()   # New email features
             self.test_settings_and_currency()
             
             # Clean up
