@@ -715,6 +715,13 @@ async def update_order(order_id: str, data: dict):
     
     return order
 
+@api_router.delete("/orders/{order_id}")
+async def delete_order(order_id: str):
+    result = await db.orders.delete_one({"id": order_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sipariş bulunamadı")
+    return {"message": "Sipariş silindi"}
+
 # --- Notification Routes ---
 @api_router.get("/notifications")
 async def get_notifications(is_read: Optional[bool] = None):
@@ -744,10 +751,24 @@ async def get_currency_rates():
 
 @api_router.post("/currency-rates")
 async def update_currency_rates(data: CurrencyRateUpdate):
-    rate = CurrencyRate(**data.model_dump())
-    doc = rate.model_dump()
-    await db.currency_rates.insert_one(doc)
-    return doc
+    try:
+        rate = CurrencyRate(
+            usd_to_try=data.usd_to_try,
+            eur_to_try=data.eur_to_try
+        )
+        doc = rate.model_dump()
+        await db.currency_rates.insert_one(doc)
+        # Return without _id
+        return {
+            "id": doc["id"],
+            "usd_to_try": doc["usd_to_try"],
+            "eur_to_try": doc["eur_to_try"],
+            "updated_at": doc["updated_at"],
+            "updated_by": doc["updated_by"]
+        }
+    except Exception as e:
+        logger.error(f"Currency rate update error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Döviz kuru güncellenemedi: {str(e)}")
 
 # --- Settings Routes ---
 @api_router.get("/settings")
