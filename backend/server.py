@@ -443,10 +443,180 @@ async def update_part(part_id: str, data: dict):
 
 @api_router.delete("/parts/{part_id}")
 async def delete_part(part_id: str):
+    # Get part to delete associated files
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if part:
+        # Delete technical drawing file if exists
+        if part.get("technical_drawing_filename"):
+            file_path = UPLOADS_DIR / part["technical_drawing_filename"]
+            if file_path.exists():
+                file_path.unlink()
+        # Delete additional documents
+        for doc_file in part.get("additional_documents", []):
+            if doc_file.get("filename"):
+                file_path = UPLOADS_DIR / doc_file["filename"]
+                if file_path.exists():
+                    file_path.unlink()
+    
     result = await db.parts.delete_one({"id": part_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Parça bulunamadı")
     return {"message": "Parça silindi"}
+
+# --- File Upload Routes ---
+ALLOWED_EXTENSIONS = {'.pdf', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs', '.png', '.jpg', '.jpeg'}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+@api_router.post("/upload/technical-drawing/{part_id}")
+async def upload_technical_drawing(part_id: str, file: UploadFile = File(...)):
+    """Upload technical drawing for a part (PDF, DWG, DXF, STEP, etc.)"""
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Parça bulunamadı")
+    
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Desteklenmeyen dosya formatı. İzin verilen: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Generate unique filename
+    unique_filename = f"{part_id}_drawing_{uuid.uuid4().hex[:8]}{file_ext}"
+    file_path = UPLOADS_DIR / unique_filename
+    
+    # Delete old file if exists
+    if part.get("technical_drawing_filename"):
+        old_file = UPLOADS_DIR / part["technical_drawing_filename"]
+        if old_file.exists():
+            old_file.unlink()
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        logger.error(f"File upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Dosya yüklenemedi")
+    
+    # Update part with file info
+    await db.parts.update_one(
+        {"id": part_id},
+        {"$set": {
+            "technical_drawing_filename": unique_filename,
+            "technical_drawing_original_name": file.filename,
+            "technical_drawing_uploaded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "message": "Teknik resim başarıyla yüklendi"
+    }
+
+@api_router.post("/upload/document/{part_id}")
+async def upload_additional_document(part_id: str, file: UploadFile = File(...)):
+    """Upload additional document for a part"""
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Parça bulunamadı")
+    
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Desteklenmeyen dosya formatı. İzin verilen: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Generate unique filename
+    unique_filename = f"{part_id}_doc_{uuid.uuid4().hex[:8]}{file_ext}"
+    file_path = UPLOADS_DIR / unique_filename
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        logger.error(f"File upload error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Dosya yüklenemedi")
+    
+    # Add to additional documents list
+    doc_info = {
+        "id": str(uuid.uuid4()),
+        "filename": unique_filename,
+        "original_name": file.filename,
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.parts.update_one(
+        {"id": part_id},
+        {"$push": {"additional_documents": doc_info}}
+    )
+    
+    return {
+        "success": True,
+        "document": doc_info,
+        "message": "Döküman başarıyla yüklendi"
+    }
+
+@api_router.get("/files/{filename}")
+async def get_file(filename: str):
+    """Download a file"""
+    file_path = UPLOADS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Dosya bulunamadı")
+    
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
+
+@api_router.delete("/files/{part_id}/{filename}")
+async def delete_file(part_id: str, filename: str):
+    """Delete a file from a part"""
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Parça bulunamadı")
+    
+    file_path = UPLOADS_DIR / filename
+    
+    # Check if it's the technical drawing
+    if part.get("technical_drawing_filename") == filename:
+        if file_path.exists():
+            file_path.unlink()
+        await db.parts.update_one(
+            {"id": part_id},
+            {"$unset": {
+                "technical_drawing_filename": "",
+                "technical_drawing_original_name": "",
+                "technical_drawing_uploaded_at": ""
+            }}
+        )
+        return {"success": True, "message": "Teknik resim silindi"}
+    
+    # Check if it's an additional document
+    docs = part.get("additional_documents", [])
+    doc_to_remove = None
+    for doc in docs:
+        if doc.get("filename") == filename:
+            doc_to_remove = doc
+            break
+    
+    if doc_to_remove:
+        if file_path.exists():
+            file_path.unlink()
+        await db.parts.update_one(
+            {"id": part_id},
+            {"$pull": {"additional_documents": {"filename": filename}}}
+        )
+        return {"success": True, "message": "Döküman silindi"}
+    
+    raise HTTPException(status_code=404, detail="Dosya bu parçaya ait değil")
 
 # --- Supplier Routes ---
 @api_router.post("/suppliers", response_model=Supplier)
