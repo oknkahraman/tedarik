@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, Package, Clock, BarChart3, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Package, Clock, BarChart3, Save, Download, Upload, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,23 +11,28 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
-import { projectsApi, partsApi, staticDataApi, dashboardApi } from '../lib/api';
-import { formatDate, getStatusColor, getStatusLabel, getGanttBarClass, cn } from '../lib/utils';
+import { projectsApi, partsApi, staticDataApi, dashboardApi, excelApi } from '../lib/api';
+import { formatDate, getStatusColor, getStatusLabel, cn } from '../lib/utils';
 import { toast } from 'sonner';
+import GanttChart from '../components/GanttChart';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [project, setProject] = useState(null);
   const [parts, setParts] = useState([]);
   const [ganttData, setGanttData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPartDialog, setShowPartDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [materials, setMaterials] = useState({});
   const [formTypes, setFormTypes] = useState({});
   const [methods, setMethods] = useState({});
   const [editingProject, setEditingProject] = useState(false);
   const [projectForm, setProjectForm] = useState({});
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   
   const [partForm, setPartForm] = useState({
     name: '',
@@ -133,6 +138,67 @@ export function ProjectDetailPage() {
       setPartForm({...partForm, manufacturing_methods: current.filter(c => c !== code)});
     } else {
       setPartForm({...partForm, manufacturing_methods: [...current, code]});
+    }
+  };
+
+  // Excel Export
+  const handleExportParts = async () => {
+    try {
+      const response = await excelApi.exportParts(projectId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${project.code}_parcalar.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Excel dosyası indirildi');
+    } catch (error) {
+      toast.error('Excel dosyası oluşturulamadı');
+    }
+  };
+
+  // Excel Template Download
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await excelApi.exportTemplate();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'parca_sablonu.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Şablon indirildi');
+    } catch (error) {
+      toast.error('Şablon indirilemedi');
+    }
+  };
+
+  // Excel Import
+  const handleImportFile = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      const response = await excelApi.importParts(projectId, file);
+      setImportResult(response.data);
+      if (response.data.imported > 0) {
+        toast.success(`${response.data.imported} parça eklendi`);
+        loadData();
+      }
+      if (response.data.errors && response.data.errors.length > 0) {
+        toast.warning(`${response.data.errors.length} satırda hata var`);
+      }
+    } catch (error) {
+      toast.error('Excel dosyası yüklenemedi');
+      setImportResult({ success: false, errors: [error.response?.data?.detail || 'Bilinmeyen hata'] });
+    } finally {
+      setImporting(false);
+      event.target.value = '';
     }
   };
 
@@ -265,7 +331,23 @@ export function ProjectDetailPage() {
 
         {/* Parts Tab */}
         <TabsContent value="parts" className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleDownloadTemplate} data-testid="download-template-btn">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Şablon İndir
+              </Button>
+              <Button variant="outline" onClick={() => setShowImportDialog(true)} data-testid="import-btn">
+                <Upload className="h-4 w-4 mr-2" />
+                Excel Yükle
+              </Button>
+              {parts.length > 0 && (
+                <Button variant="outline" onClick={handleExportParts} data-testid="export-btn">
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel İndir
+                </Button>
+              )}
+            </div>
             <Button onClick={() => setShowPartDialog(true)} data-testid="add-part-btn">
               <Plus className="h-4 w-4 mr-2" />
               Parça Ekle
@@ -277,13 +359,19 @@ export function ProjectDetailPage() {
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Package className="h-16 w-16 text-muted-foreground/50 mb-4" />
                 <h3 className="font-heading text-lg font-semibold mb-2">Parça Bulunamadı</h3>
-                <p className="text-muted-foreground text-center">
-                  Bu projeye henüz parça eklenmemiş.
+                <p className="text-muted-foreground text-center mb-4">
+                  Bu projeye henüz parça eklenmemiş. Manuel ekleyebilir veya Excel'den yükleyebilirsiniz.
                 </p>
-                <Button className="mt-4" onClick={() => setShowPartDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  İlk Parçayı Ekle
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Excel'den Yükle
+                  </Button>
+                  <Button onClick={() => setShowPartDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Manuel Ekle
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -342,27 +430,15 @@ export function ProjectDetailPage() {
         <TabsContent value="gantt">
           <Card>
             <CardHeader>
-              <CardTitle>Üretim Planı</CardTitle>
-              <CardDescription>Parçaların imalat süreçleri ve zaman planlaması</CardDescription>
+              <CardTitle className="font-heading">Üretim Planı</CardTitle>
+              <CardDescription>Parçaların imalat süreçleri ve interaktif zaman planlaması</CardDescription>
             </CardHeader>
             <CardContent>
-              {ganttData?.tasks?.length > 0 ? (
-                <div className="space-y-2">
-                  {ganttData.tasks.map((task) => (
-                    <div key={task.id} className="flex items-center gap-4">
-                      <div className="w-32 text-sm font-mono truncate">{task.part_code}</div>
-                      <div className={cn('gantt-bar flex-1', getGanttBarClass(task.category))}>
-                        {task.method_name} ({task.duration_days} gün)
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Henüz planlama yapılmamış</p>
-                </div>
-              )}
+              <GanttChart 
+                project={ganttData?.project} 
+                tasks={ganttData?.tasks || []}
+                onTaskClick={(task) => toast.info(`${task.part_name} - ${task.method_name}`)}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -522,6 +598,74 @@ export function ProjectDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPartDialog(false)}>İptal</Button>
             <Button onClick={handleCreatePart} data-testid="submit-part-btn">Parça Ekle</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="sm:max-w-md" data-testid="import-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading">Excel'den Parça Yükle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/50 rounded-sm p-4 text-sm space-y-2">
+              <p className="font-medium">Yükleme Adımları:</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>"Şablon İndir" butonuyla şablonu indirin</li>
+                <li>Şablonu parça bilgileriyle doldurun</li>
+                <li>Doldurulmuş dosyayı aşağıdan yükleyin</li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full" onClick={handleDownloadTemplate}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Şablon İndir
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Excel Dosyası Seç</Label>
+              <Input 
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFile}
+                ref={fileInputRef}
+                disabled={importing}
+              />
+            </div>
+
+            {importing && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span>Yükleniyor...</span>
+              </div>
+            )}
+
+            {importResult && (
+              <div className={cn(
+                'rounded-sm p-4 text-sm',
+                importResult.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+              )}>
+                <p className="font-medium">{importResult.message}</p>
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {importResult.errors.slice(0, 5).map((error, idx) => (
+                      <li key={idx}>• {error}</li>
+                    ))}
+                    {importResult.errors.length > 5 && (
+                      <li>... ve {importResult.errors.length - 5} hata daha</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowImportDialog(false); setImportResult(null); }}>
+              Kapat
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
