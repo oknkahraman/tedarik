@@ -161,6 +161,48 @@ export function QuotesPage() {
     }
   };
 
+  const handleOpenSendEmail = (request) => {
+    setSelectedRequest(request);
+    setEmailSuppliers(request.supplier_ids || []);
+    setShowSendEmailDialog(true);
+  };
+
+  const handleSendEmails = async () => {
+    if (emailSuppliers.length === 0) {
+      toast.error('En az bir tedarikçi seçin');
+      return;
+    }
+
+    setSendingEmails(true);
+    try {
+      const response = await quotesApi.sendEmails({
+        quote_request_id: selectedRequest.id,
+        supplier_ids: emailSuppliers
+      });
+      
+      if (response.data.sent && response.data.sent.length > 0) {
+        toast.success(`${response.data.sent.length} tedarikçiye e-posta gönderildi`);
+      }
+      if (response.data.failed && response.data.failed.length > 0) {
+        toast.warning(`${response.data.failed.length} e-posta gönderilemedi`);
+      }
+      setShowSendEmailDialog(false);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'E-posta gönderilemedi');
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
+  const toggleEmailSupplier = (supplierId) => {
+    if (emailSuppliers.includes(supplierId)) {
+      setEmailSuppliers(emailSuppliers.filter(id => id !== supplierId));
+    } else {
+      setEmailSuppliers([...emailSuppliers, supplierId]);
+    }
+  };
+
   const toggleSupplier = (supplierId) => {
     const current = requestForm.supplier_ids;
     if (current.includes(supplierId)) {
